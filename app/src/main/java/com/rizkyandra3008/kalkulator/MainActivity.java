@@ -1,72 +1,100 @@
 package com.rizkyandra3008.kalkulator;
 
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Button;
-import android.widget.EditText;
-import android.widget.TextView;
+import android.widget.ListView;
+
+import com.rizkyandra3008.kalkulator.adapter.Adapter;
+import com.rizkyandra3008.kalkulator.helper.Helper;
+import com.rizkyandra3008.kalkulator.model.Data;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-    EditText et1, et2;
-    TextView tvhasil;
-    Button btTambah, btKurang, btKali, btBagi;
+
+    ListView listView;
+    AlertDialog.Builder dialog;
+    List<Data> lists = new ArrayList<>();
+    Adapter adapter;
+    Helper db = new Helper(this);
+    Button btTambah;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        et1 = (EditText) findViewById(R.id.number1);
-        et2 = (EditText) findViewById(R.id.number2);
-        tvhasil = (TextView) findViewById(R.id.textViewHasil);
-        btTambah = (Button) findViewById(R.id.buttonTambah);
-        btKurang = (Button) findViewById(R.id.buttonKurang);
-        btKali = (Button) findViewById(R.id.buttonKali);
-        btBagi = (Button) findViewById(R.id.buttonBagi);
+        db = new Helper(getApplicationContext());
 
+        btTambah = findViewById(R.id.btnTambah);
         btTambah.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                int x1 = Integer.parseInt(et1.getText().toString().trim());
-                int x2 = Integer.parseInt(et2.getText().toString().trim());
-                int hasil = x1 + x2;
-                String jumlah = String.valueOf(hasil);
-                tvhasil.setText(jumlah);
+                Intent intent = new Intent(MainActivity.this, EditorActivity.class);
+                startActivity(intent);
             }
         });
+        listView = findViewById(R.id.list_item);
+        adapter = new Adapter(MainActivity.this, lists);
+        listView.setAdapter(adapter);
 
-        btKurang.setOnClickListener(new View.OnClickListener() {
+        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
-            public void onClick(View view) {
-                int x1 = Integer.parseInt(et1.getText().toString().trim());
-                int x2 = Integer.parseInt(et2.getText().toString().trim());
-                int hasil = x1 - x2;
-                String kurang = String.valueOf(hasil);
-                tvhasil.setText(kurang);
+            public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long l) {
+                final String id = lists.get(i).getId();
+                final String suhu = lists.get(i).getSuhu();
+                final String date = lists.get(i).getDate();
+                final String time = lists.get(i).getTime();
+                final CharSequence[] dialogItem = {"Hapus"};
+                dialog = new AlertDialog.Builder(MainActivity.this);
+                dialog.setItems(dialogItem, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        switch (i) {
+                            case 0:
+                                db.delete(Integer.parseInt(id));
+                                lists.clear();
+                                getData();
+                                break;
+                        }
+                    }
+                }).show();
+                return false;
             }
         });
+        getData();
+    }
 
-        btKali.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                int x1 = Integer.parseInt(et1.getText().toString().trim());
-                int x2 = Integer.parseInt(et2.getText().toString().trim());
-                int hasil = x1 * x2;
-                String kali = String.valueOf(hasil);
-                tvhasil.setText(kali);
-            }
-        });
+    private void getData() {
+        ArrayList<HashMap<String, String>> rows = db.getAll();
+        for (int i = 0; i < rows.size(); i++) {
+            String id = rows.get(i).get("id");
+            String suhu = rows.get(i).get("suhu");
+            String date = rows.get(i).get("date");
+            String time = rows.get(i).get("time");
 
-        btBagi.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                int x1 = Integer.parseInt(et1.getText().toString().trim());
-                int x2 = Integer.parseInt(et2.getText().toString().trim());
-                int hasil = x1 / x2;
-                String bagi = String.valueOf(hasil);
-                tvhasil.setText(bagi);
-            }
-        });
+            Data data = new Data();
+            data.setId(id);
+            data.setSuhu(suhu);
+            data.setDate(date);
+            data.setTime(time);
+            lists.add(data);
+        }
+        adapter.notifyDataSetChanged();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        lists.clear();
+        getData();
     }
 }
